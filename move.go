@@ -66,31 +66,23 @@ func moveToMusicDir(cfg *Config, stats *RunStats, log *slog.Logger) error {
 			}
 		} else {
 			log.Info("moving album to music library", "src", src, "dest", dest)
-			moved := false
 			if !cfg.DryRun {
+				// Try a fast same-filesystem rename first; mergeAlbumDir handles
+				// cross-device moves transparently via moveFile.
 				if err := os.Rename(src, dest); err != nil {
-					if isCrossDevice(err) {
-						log.Info("cross-device move, using copy+delete", "src", src)
-						if err := mergeAlbumDir(src, dest, cfg.DryRun, stats, log); err != nil {
-							log.Warn("copy+delete failed", "src", src, "err", err)
-							stats.incError()
-							continue
-						}
-						moved = true
-					} else {
+					if !isCrossDevice(err) {
 						log.Warn("error moving album", "src", src, "err", err)
 						stats.incError()
 						continue
 					}
-				} else {
-					moved = true
+					if err := mergeAlbumDir(src, dest, cfg.DryRun, stats, log); err != nil {
+						log.Warn("error moving album (cross-device)", "src", src, "err", err)
+						stats.incError()
+						continue
+					}
 				}
-			} else {
-				moved = true // dry run: count as if moved
 			}
-			if moved {
-				stats.incMoved()
-			}
+			stats.incMoved()
 		}
 
 		// Remove empty source dir (no-op if rename already moved it).
@@ -101,6 +93,3 @@ func moveToMusicDir(cfg *Config, stats *RunStats, log *slog.Logger) error {
 	return nil
 }
 
-func isCrossDevice(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "invalid cross-device link")
-}

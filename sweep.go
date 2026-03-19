@@ -129,18 +129,18 @@ func mergeAlbumDir(src, dest string, dryRun bool, stats *RunStats, log *slog.Log
 				"src", path, "conflict_dest", conflictDest)
 			stats.incConflict()
 			if !dryRun {
-				if err := os.Rename(path, conflictDest); err != nil {
+				if err := moveFile(path, conflictDest); err != nil {
 					return fmt.Errorf("moving conflict file: %w", err)
 				}
 			}
 			return nil
 		}
 
-		// Destination does not exist — plain move.
+		// Destination does not exist — move (with cross-device fallback).
 		log.Info("moving file", "src", path, "dest", destPath)
 		stats.incMovedFile()
 		if !dryRun {
-			if err := os.Rename(path, destPath); err != nil {
+			if err := moveFile(path, destPath); err != nil {
 				return fmt.Errorf("moving %s -> %s: %w", path, destPath, err)
 			}
 		}

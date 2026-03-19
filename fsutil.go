@@ -130,3 +130,47 @@ func ensureDir(path string, dryRun bool) error {
 	}
 	return os.MkdirAll(path, 0o755)
 }
+
+func isCrossDevice(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "invalid cross-device link")
+}
+
+// moveFile moves src to dest. If they are on different filesystems it falls
+// back to copy+delete automatically.
+func moveFile(src, dest string) error {
+	if err := os.Rename(src, dest); err == nil {
+		return nil
+	} else if !isCrossDevice(err) {
+		return err
+	}
+	// Cross-device: copy then remove source.
+	if err := copyFile(src, dest); err != nil {
+		return err
+	}
+	return os.Remove(src)
+}
+
+// copyFile copies src to dest, preserving permissions.
+func copyFile(src, dest string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	info, err := in.Stat()
+	if err != nil {
+		return err
+	}
+
+	out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+	return out.Close()
+}
