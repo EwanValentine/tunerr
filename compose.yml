@@ -13,6 +13,8 @@ services:
       # LIDARR_URL: http://lidarr:8686              # optional
       # LIDARR_API_KEY: your_api_key_here           # optional
       # LIDARR_RESCAN: "true"                       # optional; default false
+      # MB_ENABLED: "true"                          # optional; MusicBrainz year lookup
+      # MB_USER_AGENT: "myapp/1.0 ( you@example.com )"  # required when MB_ENABLED=true
     volumes:
       - /path/to/slskd/downloads:/downloads/slskd
       - /path/to/music:/music

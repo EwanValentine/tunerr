@@ -22,6 +22,10 @@ type Config struct {
 	LidarrURL    string
 	LidarrAPIKey string
 	LidarrRescan bool
+
+	// MusicBrainz
+	MBEnabled   bool
+	MBUserAgent string
 }
 
 func loadConfig() (*Config, error) {
@@ -45,6 +49,9 @@ func loadConfig() (*Config, error) {
 	c.LidarrURL = os.Getenv("LIDARR_URL")
 	c.LidarrAPIKey = os.Getenv("LIDARR_API_KEY")
 	c.LidarrRescan = strings.ToLower(envOr("LIDARR_RESCAN", "false")) == "true"
+
+	c.MBEnabled = strings.ToLower(envOr("MB_ENABLED", "false")) == "true"
+	c.MBUserAgent = envOr("MB_USER_AGENT", "tunerr/1.0 ( https://github.com/youruser/tunerr )")
 
 	return c, nil
 }

@@ -35,11 +35,13 @@ type noopYearLookup struct{}
 
 func (noopYearLookup) LookupYear(_, _ string) (int, error) { return 0, nil }
 
-func tidyAlbumFolders(cfg *Config, stats *RunStats, log *slog.Logger) error {
-	return tidyAlbumFoldersWithLookup(cfg, stats, log, noopYearLookup{})
+// isNoop reports whether the lookup will never return a real year.
+func isNoop(y YearLookup) bool {
+	_, ok := y.(noopYearLookup)
+	return ok
 }
 
-// tidyAlbumFoldersWithLookup is the testable/extensible entry point.
+// tidyAlbumFoldersWithLookup is the pipeline entry point for step 2.
 func tidyAlbumFoldersWithLookup(cfg *Config, stats *RunStats, log *slog.Logger, yearLookup YearLookup) error {
 	entries, err := os.ReadDir(cfg.CompleteDir)
 	if err != nil {
@@ -59,8 +61,13 @@ func tidyAlbumFoldersWithLookup(cfg *Config, stats *RunStats, log *slog.Logger, 
 		}
 
 		if albumPattern.MatchString(name) {
-			log.Debug("folder already well-named, skipping rename", "name", name)
-			continue
+			// If the folder has an unknown year and we have a real lookup,
+			// try to resolve it. Otherwise skip.
+			if !strings.HasSuffix(name, "(????)") || isNoop(yearLookup) {
+				log.Debug("folder already well-named, skipping rename", "name", name)
+				continue
+			}
+			log.Debug("folder has unknown year, attempting MB lookup", "name", name)
 		}
 
 		folderPath := filepath.Join(cfg.CompleteDir, name)

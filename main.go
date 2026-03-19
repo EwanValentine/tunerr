@@ -80,7 +80,13 @@ func runPipeline(cfg *Config, log *slog.Logger) {
 		stats.incError()
 	}
 
-	if err := tidyAlbumFolders(cfg, stats, log); err != nil {
+	var yearLookup YearLookup = noopYearLookup{}
+	if cfg.MBEnabled {
+		yearLookup = newMBClient(cfg.MBUserAgent, log)
+		log.Info("musicbrainz year lookup enabled")
+	}
+
+	if err := tidyAlbumFoldersWithLookup(cfg, stats, log, yearLookup); err != nil {
 		log.Error("step 2 (tidy album folders) error", "err", err)
 		stats.incError()
 	}

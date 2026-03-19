@@ -70,6 +70,8 @@ All configuration is via environment variables. **No API keys or paths are hardc
 | `LIDARR_URL` | | — | Base URL of your Lidarr instance, e.g. `http://lidarr:8686` |
 | `LIDARR_API_KEY` | | — | Lidarr API key |
 | `LIDARR_RESCAN` | | `false` | Set to `true` to trigger a rescan after runs where files moved |
+| `MB_ENABLED` | | `false` | Set to `true` to look up missing release years from MusicBrainz |
+| `MB_USER_AGENT` | | `tunerr/1.0 (…)` | User-Agent sent to MB API — MusicBrainz requires a meaningful value with contact info |
 
 ---
 
@@ -148,9 +150,24 @@ docker logs -f tunerr | jq -r '[.time, .level, .msg] | join(" | ")'
 
 ---
 
-## Extending: MusicBrainz year lookup
+## MusicBrainz year lookup
 
-The `YearLookup` interface in `tidy.go` is the plug-in point:
+Enable with `MB_ENABLED=true`. When active, any album whose audio tags have no year will be looked up against the [MusicBrainz release-group API](https://musicbrainz.org/doc/MusicBrainz_API). The year is extracted from the `first-release-date` field.
+
+- Results are cached in-memory (per process lifetime) so each `(artist, album)` pair hits the network at most once.
+- The client enforces MusicBrainz's 1 request/second rate limit automatically.
+- MB lookups are purely additive: they never override a year already present in the audio tags.
+- Set `MB_USER_AGENT` to something identifying — MusicBrainz blocks generic User-Agents.
+
+### Running live tests
+
+```sh
+MB_LIVE=1 go test ./... -run TestMBClientLive -v
+```
+
+### Extending further
+
+`YearLookup` in `tidy.go` is the interface:
 
 ```go
 type YearLookup interface {
@@ -158,8 +175,7 @@ type YearLookup interface {
 }
 ```
 
-Implement it and pass it to `tidyAlbumFoldersWithLookup(cfg, stats, log, myMBClient)`.
-The tag-based path falls through to this hook only when `m.Year() == 0`, so MB lookups are purely additive and never override real tag data.
+Swap in any implementation (e.g. a local database, Discogs API) by passing it to `tidyAlbumFoldersWithLookup`.
 
 ---
 
