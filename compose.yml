@@ -1,0 +1,19 @@
+services:
+  tunerr:
+    build: .
+    restart: unless-stopped
+    environment:
+      DOWNLOAD_ROOT: /downloads/slskd
+      # COMPLETE_DIR: /downloads/slskd/complete      # optional override
+      # FAILED_IMPORTS_DIR: /downloads/slskd/failed_imports  # optional override
+      OUTPUT_MUSIC_DIR: /music
+      INTERVAL_SECONDS: "300"
+      DRY_RUN: "false"
+      # LOG_PATH: /logs/tunerr.log                  # optional; default stdout
+      # LIDARR_URL: http://lidarr:8686              # optional
+      # LIDARR_API_KEY: your_api_key_here           # optional
+      # LIDARR_RESCAN: "true"                       # optional; default false
+    volumes:
+      - /path/to/slskd/downloads:/downloads/slskd
+      - /path/to/music:/music
+      # - /path/to/logs:/logs                       # optional log volume
